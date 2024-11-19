@@ -1,0 +1,10 @@
+services:
+  clip-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    platform: linux/arm64
+    volumes:
+      - .:/clip-backend
+    ports:
+      - "8000:8000"

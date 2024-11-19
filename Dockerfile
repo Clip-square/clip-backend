@@ -1,0 +1,23 @@
+FROM python:3.12-slim
+
+RUN apt-get update && apt-get install -y \
+    curl \
+    libpq-dev \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -sSL https://install.python-poetry.org | python3 -
+
+ENV PATH="/root/.local/bin:$PATH"
+ENV PYTHONUNBUFFERED 1
+
+WORKDIR /clip-backend
+
+COPY pyproject.toml poetry.lock /clip-backend/
+
+RUN poetry install --no-root
+
+COPY . /clip-backend/
+
+CMD poetry run python manage.py migrate && poetry run python manage.py runserver 0.0.0.0:8000
+
