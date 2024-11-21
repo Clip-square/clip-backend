@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 import environ
 import os, json
+from datetime import timedelta
 from django.core.exceptions import ImproperlyConfigured
 from django.db.backends.postgresql.psycopg_any import IsolationLevel
 
@@ -22,7 +23,7 @@ from django.db.backends.postgresql.psycopg_any import IsolationLevel
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-# Secret key setting
+# Secret key
 secret_file = os.path.join(BASE_DIR, 'secrets.json')
 with open(secret_file) as f:
     secrets = json.loads(f.read())
@@ -37,11 +38,9 @@ def get_secret(setting):
 SECRET_KEY = get_secret("SECRET_KEY")
 
 
-# Environment setting
+# Environment
 env = environ.Env()
 environ.Env.read_env(BASE_DIR / '.env')
-
-
 
 
 # Quick-start development settings - unsuitable for production
@@ -63,8 +62,52 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework_simplejwt',
     'psycopg2',
+    'drf_yasg',
+    'accounts'
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.AllowAny'
+    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=6),
+    'REFRESH_TOKEN_LIFETIME': timedelta(weeks=2),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUDIENCE': None,
+    'ISSUER': None,
+    'JWK_URL': None,
+    'LEEWAY': 0,
+
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_HEADER_NAME': 'Authorization',
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'USER_AUTHENTICATION_RULE': 'rest_framework_simplejwt.authentication.default_user_authentication_rule',
+
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+    'TOKEN_USER_CLASS': 'rest_framework_simplejwt.models.TokenUser',
+
+    'JTI_CLAIM': 'jti',
+
+    'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
+    'SLIDING_TOKEN_LIFETIME': timedelta(hours=6),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(weeks=2),
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -81,7 +124,7 @@ ROOT_URLCONF = 'app.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -95,6 +138,35 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'app.wsgi.application'
+
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ORIGIN_WHITELIST = (
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+)
+
+CORS_ALLOW_HEADERS = (
+    'access-control-allow-credentials',
+    'access-control-allow-origin',
+    'access-control-request-method',
+    'access-control-request-headers',
+    'accept',
+    'accept-encoding',
+    'accept-language',
+    'authorization',
+    'connection',
+    'content-type',
+    'dnt',
+    'credentials',
+    'host',
+    'origin',
+    'user-agent',
+    'X-CSRFToken',
+    'csrftoken',
+    'x-requested-with',
+)
 
 
 # Database
@@ -156,3 +228,15 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Login & Logout redirect url
+LOGIN_REDIRECT_URL = "home"
+LOGOUT_REDIRECT_URL = "home"
+
+# Use CustomUser Model
+AUTH_USER_MODEL = "accounts.CustomUser"
+
+# Disable Django Login Button
+SWAGGER_SETTINGS = {
+   'USE_SESSION_AUTH': False
+}
