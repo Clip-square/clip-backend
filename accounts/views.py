@@ -18,9 +18,42 @@ class RegisterAPIView(APIView):
     @swagger_auto_schema(
         operation_summary="회원가입",
         operation_description="사용자 회원가입을 수행합니다.",
-        request_body=UserSerializer,
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "email": openapi.Schema(type=openapi.TYPE_STRING, description="사용자 이메일"),
+                "password": openapi.Schema(type=openapi.TYPE_STRING, description="사용자 비밀번호"),
+                "name": openapi.Schema(type=openapi.TYPE_STRING, description="사용자 이름"),
+            },
+            required=["email", "password", "name"],
+        ),
         responses={
-            200: openapi.Response("회원가입 성공", UserSerializer),
+            200: openapi.Response(
+                "회원가입 성공",
+                openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "user": openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                "id": openapi.Schema(type=openapi.TYPE_INTEGER, description="사용자 ID"),
+                                "email": openapi.Schema(type=openapi.TYPE_STRING, description="사용자 이메일"),
+                                "name": openapi.Schema(type=openapi.TYPE_STRING, description="사용자 이름"),
+                                "created_at": openapi.Schema(type=openapi.FORMAT_DATETIME, description="생성 시간"),
+                                "updated_at": openapi.Schema(type=openapi.FORMAT_DATETIME, description="수정 시간"),
+                            },
+                        ),
+                        "message": openapi.Schema(type=openapi.TYPE_STRING, description="결과 메시지"),
+                        "token": openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                "access": openapi.Schema(type=openapi.TYPE_STRING, description="액세스 토큰"),
+                                "refresh": openapi.Schema(type=openapi.TYPE_STRING, description="리프레시 토큰"),
+                            },
+                        ),
+                    },
+                ),
+            ),
             400: "유효성 검사 오류",
         },
     )
@@ -59,7 +92,19 @@ class AuthAPIView(APIView):
         operation_summary="사용자 인증 확인",
         operation_description="쿠키에 저장된 액세스 토큰을 기반으로 사용자 정보를 반환합니다.",
         responses={
-            200: openapi.Response("인증 성공", UserSerializer),
+            200: openapi.Response(
+                "인증 성공",
+                openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "id": openapi.Schema(type=openapi.TYPE_INTEGER, description="사용자 ID"),
+                        "email": openapi.Schema(type=openapi.TYPE_STRING, description="사용자 이메일"),
+                        "name": openapi.Schema(type=openapi.TYPE_STRING, description="사용자 이름"),
+                        "created_at": openapi.Schema(type=openapi.FORMAT_DATETIME, description="생성 시간"),
+                        "updated_at": openapi.Schema(type=openapi.FORMAT_DATETIME, description="수정 시간"),
+                    },
+                ),
+            ),
             400: "쿠키에 유효한 토큰이 없습니다.",
         },
     )
@@ -103,7 +148,7 @@ class AuthAPIView(APIView):
 
     @swagger_auto_schema(
         operation_summary="로그인",
-        operation_description="이메일과 비밀번호로 사용자 로그인을 수행합니다.",
+        operation_description="이메일, 비밀번호로 사용자 로그인을 수행합니다.",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
@@ -113,7 +158,31 @@ class AuthAPIView(APIView):
             required=["email", "password"],
         ),
         responses={
-            200: "로그인 성공",
+            200: openapi.Response(
+                "로그인 성공",
+                openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        "user": openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                "id": openapi.Schema(type=openapi.TYPE_INTEGER, description="사용자 ID"),
+                                "email": openapi.Schema(type=openapi.TYPE_STRING, description="사용자 이메일"),
+                                "name": openapi.Schema(type=openapi.TYPE_STRING, description="사용자 이름"),
+                                "created_at": openapi.Schema(type=openapi.FORMAT_DATETIME, description="생성 시간"),
+                                "updated_at": openapi.Schema(type=openapi.FORMAT_DATETIME, description="수정 시간"),
+                            },
+                        ),
+                        "token": openapi.Schema(
+                            type=openapi.TYPE_OBJECT,
+                            properties={
+                                "access": openapi.Schema(type=openapi.TYPE_STRING, description="액세스 토큰"),
+                                "refresh": openapi.Schema(type=openapi.TYPE_STRING, description="리프레시 토큰"),
+                            },
+                        ),
+                    },
+                ),
+            ),
             400: "로그인 실패 또는 잘못된 입력",
         },
     )
