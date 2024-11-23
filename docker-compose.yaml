@@ -1,5 +1,6 @@
 services:
   clip-backend:
+    image: ${DOCKER_IMAGE}:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -8,3 +9,4 @@ services:
       - .:/clip-backend
     ports:
       - "8000:8000"
+    restart: always
