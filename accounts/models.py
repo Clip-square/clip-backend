@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.core.validators import MinLengthValidator, MaxLengthValidator
+
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password, name, **kwargs):
@@ -18,9 +20,13 @@ class UserManager(BaseUserManager):
         superuser.save(using = self._db)
         return superuser
 
+
 class CustomUser(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(max_length = 320, unique = True, null = False, blank = False)
-    name = models.CharField(max_length = 16, unique = False, null = False, blank = False)
+    name = models.CharField(max_length = 16, unique = False, null = False, blank = False, validators=[
+            MinLengthValidator(2),
+            MaxLengthValidator(16),
+        ])
     is_superuser = models.BooleanField(default = False)
     is_active = models.BooleanField(default = True)
     is_staff = models.BooleanField(default = False)
