@@ -1,0 +1,69 @@
+name: CD Docker
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  DOCKER_IMAGE: ghcr.io/${{ github.actor }}/clip-backend
+  VERSION: ${{ github.sha }}
+  NAME: clip_cicd
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up docker buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Cache docker layers
+        uses: actions/cache@v3
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-buildx-${{ env.VERSION }}
+          restore-keys: |
+            ${{ runner.os }}-buildx-
+      - name: Login to ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GHCR_TOKEN }}
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v6
+        with:
+          builder: ${{ steps.buildx.outputs.name }}
+          push: true
+          tags: ${{ env.DOCKER_IMAGE }}:latest
+          platforms: linux/arm64
+  deploy:
+    needs: build
+    name: Deploy
+    runs-on: [ self-hosted, label-go ]
+    steps:
+      - name: Login to ghcr
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GHCR_TOKEN }}
+      - name: Create .env & secrets.json
+        run: |
+          echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
+          echo "DB_USER=${{ secrets.DB_USER }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
+          echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
+          echo "{\"SECRET_KEY\":\"${{ secrets.SECRET_KEY }}\"}" > secrets.json
+      - name: Deploy with Docker Compose
+        run: |
+          sudo docker stop ${{ env.NAME }}
+          sudo docker rm ${{ env.NAME }}
+          sudo docker rmi ${{ env.DOCKER_IMAGE }}:latest
+          sudo docker pull ${{ env.DOCKER_IMAGE }}:latest
+          sudo docker run -d -p 8000:8000 --name clip_cicd --restart always --env-file /actions-runner/_work/clip-backend/clip-backend/.env -v $PWD/secrets.json:/clip-backend/secrets.json ${{ env.DOCKER_IMAGE }}:latest
