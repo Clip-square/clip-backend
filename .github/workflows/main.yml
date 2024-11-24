@@ -37,7 +37,6 @@ jobs:
           builder: ${{ steps.buildx.outputs.name }}
           push: true
           tags: ${{ env.DOCKER_IMAGE }}:latest
-          platforms: linux/arm64
   deploy:
     needs: build
     name: Deploy
