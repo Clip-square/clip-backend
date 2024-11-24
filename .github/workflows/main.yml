@@ -2,12 +2,12 @@ name: CD Docker
 
 on:
   push:
-    branches: [ main ]
+    branches: main
   pull_request:
-    branches: [ main ]
+    branches: main
 
 env:
-  DOCKER_IMAGE: ghcr.io/${{ github.actor }}/clip-backend
+  DOCKER_IMAGE: ghcr.io/${{ github.repository_owner }}/clip-backend
   VERSION: ${{ github.sha }}
   NAME: clip_cicd
 
@@ -28,11 +28,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
       - name: Login to ghcr
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GHCR_TOKEN }}
       - name: Build and push
         id: docker_build
         uses: docker/build-push-action@v6
@@ -47,11 +44,8 @@ jobs:
     runs-on: [ self-hosted, label-go ]
     steps:
       - name: Login to ghcr
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GHCR_TOKEN }}
+        run: |
+          sudo docker login ghcr.io -u ${{ github.actor }} -p ${{ secrets.GHCR_TOKEN }}
       - name: Create .env & secrets.json
         run: |
           echo "DB_NAME=${{ secrets.DB_NAME }}" >> .env
@@ -60,7 +54,7 @@ jobs:
           echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
           echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
           echo "{\"SECRET_KEY\":\"${{ secrets.SECRET_KEY }}\"}" > secrets.json
-      - name: Deploy with Docker Compose
+      - name: Deploy with Docker
         run: |
           sudo docker stop ${{ env.NAME }}
           sudo docker rm ${{ env.NAME }}
