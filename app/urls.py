@@ -3,6 +3,7 @@ from django.urls import path, include, re_path
 from drf_yasg.views import get_schema_view
 from rest_framework.permissions import AllowAny
 from drf_yasg import openapi
+from accounts.authenticate import SafeJWTAuthentication
 
 
 schema_view_v1 = get_schema_view(
@@ -15,6 +16,7 @@ schema_view_v1 = get_schema_view(
     validators = ['flex'],
     public = True,
     permission_classes = [AllowAny],
+    authentication_classes=[SafeJWTAuthentication],
     patterns=[
         path('accounts/', include('accounts.urls')),
     ]
@@ -23,6 +25,7 @@ schema_view_v1 = get_schema_view(
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
+    path('organizations/', include('organizations.urls')),
     re_path(r'^v1/swagger/$', schema_view_v1.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     re_path(r'^v1/redoc/$', schema_view_v1.with_ui('redoc', cache_timeout=0), name='schema-redoc-v1'),
 ]

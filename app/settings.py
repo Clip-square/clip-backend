@@ -66,7 +66,8 @@ INSTALLED_APPS = [
     'psycopg2',
     'drf_yasg',
     'corsheaders',
-    'accounts'
+    'accounts',
+    'organizations',
 ]
 
 REST_FRAMEWORK = {

@@ -12,6 +12,7 @@ from .authenticate import SafeJWTAuthentication
 
 class RegisterAPIView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = [SafeJWTAuthentication]
 
     @swagger_auto_schema(
         operation_summary="회원가입",
@@ -186,7 +187,7 @@ class AuthAPIView(APIView):
 
             return response
         else:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+            return Response(status = status.HTTP_400_BAD_REQUEST)
 
     @swagger_auto_schema(
         operation_summary="로그아웃",
@@ -197,7 +198,6 @@ class AuthAPIView(APIView):
         authentication = SafeJWTAuthentication()
         user, auth_error = authentication.authenticate(request)
 
-        
         if not user:
             return Response({'error': 'Authentication failed.'}, status=status.HTTP_401_UNAUTHORIZED)
         

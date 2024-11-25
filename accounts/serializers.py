@@ -4,10 +4,11 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 
 class UserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True)
+
     class Meta:
         model = CustomUser
-        exclude = ['password']
-
+        fields = '__all__'
 
     def create(self, validated_data):
         password = validated_data['password']
