@@ -19,6 +19,7 @@ schema_view_v1 = get_schema_view(
     authentication_classes=[SafeJWTAuthentication],
     patterns=[
         path('accounts/', include('accounts.urls')),
+        path('organizations/', include('organizations.urls')),
     ]
 )
 

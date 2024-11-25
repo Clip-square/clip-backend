@@ -7,38 +7,30 @@ from accounts.authenticate import SafeJWTAuthentication
 from rest_framework.permissions import AllowAny
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
+from django.db import IntegrityError
+
 
 class OrganizationView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = [SafeJWTAuthentication]
 
     @swagger_auto_schema(
-        operation_description="조직의 정보를 조회합니다. `organization_id`가 제공되면 해당 조직만, 제공되지 않으면 모든 조직 정보를 반환합니다.",
+        operation_description="모든 조직 정보를 조회합니다.",
         responses={
             200: OrganizationSerializer,
-            404: openapi.Response(description="조직을 찾을 수 없습니다."),
             401: openapi.Response(description="인증 실패")
         }
     )
-    def get(self, request, organization_id=None):
+    def get(self, request):
         authentication = SafeJWTAuthentication()
         user, auth_error = authentication.authenticate(request)
 
         if not user:
             return Response({'error': '인증에 실패했습니다.'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        if organization_id:
-            try:
-                organization = Organization.objects.get(id=organization_id)
-            except Organization.DoesNotExist:
-                return Response({"error": "조직을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
-
-            return Response(OrganizationSerializer(organization).data, status=status.HTTP_200_OK)
-
-        else:
-            organizations = Organization.objects.all()
-            return Response(OrganizationSerializer(organizations, many=True).data, status=status.HTTP_200_OK)
-
+        organizations = Organization.objects.all()
+        return Response(OrganizationSerializer(organizations, many=True).data, status=status.HTTP_200_OK)
+    
     @swagger_auto_schema(
         operation_description="새로운 조직을 생성합니다. 조직의 이름을 요청 본문에 포함시켜야 합니다.",
         request_body=openapi.Schema(
@@ -65,11 +57,43 @@ class OrganizationView(APIView):
         if not name:
             return Response({"error": "조직 이름은 필수입니다."}, status=status.HTTP_400_BAD_REQUEST)
 
-        organization = Organization.objects.create(name=name, owner=user)
-        OrganizationMember.objects.create(organization=organization, user=user)
+        if Organization.objects.filter(name=name).exists():
+            return Response({"error": "이미 존재하는 조직 이름입니다."}, status=status.HTTP_409_CONFLICT)
+
+        try:
+            organization = Organization.objects.create(name=name, owner=user)
+            OrganizationMember.objects.create(organization=organization, user=user)
+        except IntegrityError:
+            return Response({"error": "조직 이름이 중복되었습니다."}, status=status.HTTP_409_CONFLICT)
 
         return Response(OrganizationSerializer(organization).data, status=status.HTTP_201_CREATED)
 
+
+class OrganizationDetailView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [SafeJWTAuthentication]
+
+    @swagger_auto_schema(
+        operation_description="특정 조직의 정보를 조회합니다.",
+        responses={
+            200: OrganizationSerializer,
+            404: openapi.Response(description="조직을 찾을 수 없습니다."),
+            401: openapi.Response(description="인증 실패")
+        }
+    )
+    def get(self, request, organization_id):
+        authentication = SafeJWTAuthentication()
+        user, auth_error = authentication.authenticate(request)
+
+        if not user:
+            return Response({'error': '인증에 실패했습니다.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        try:
+            organization = Organization.objects.get(id=organization_id)
+        except Organization.DoesNotExist:
+            return Response({"error": "조직을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(OrganizationSerializer(organization).data, status=status.HTTP_200_OK)
 
 class OrganizationInviteView(APIView):
     permission_classes = [AllowAny]
