@@ -2,7 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Organization, OrganizationMember
-from .serializers import OrganizationSerializer
+from .serializers import OrganizationSerializer, OrganizationMemberSerializer
 from accounts.authenticate import SafeJWTAuthentication
 from rest_framework.permissions import AllowAny
 from drf_yasg.utils import swagger_auto_schema
@@ -68,15 +68,46 @@ class OrganizationView(APIView):
 
         return Response(OrganizationSerializer(organization).data, status=status.HTTP_201_CREATED)
 
-
 class OrganizationDetailView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = [SafeJWTAuthentication]
 
+    
     @swagger_auto_schema(
-        operation_description="특정 조직의 정보를 조회합니다.",
+        operation_description="특정 조직의 정보를 조회합니다. 조직의 정보와 함께 조직원들도 반환합니다.",
         responses={
-            200: OrganizationSerializer,
+            200: openapi.Response(
+                description="조직 정보와 조직원 목록",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'id': openapi.Schema(type=openapi.TYPE_INTEGER, description="조직 ID"),
+                        'name': openapi.Schema(type=openapi.TYPE_STRING, description="조직 이름"),
+                        'owner': openapi.Schema(type=openapi.TYPE_STRING, description="조직 주인의 이메일"),
+                        'invite_code': openapi.Schema(type=openapi.TYPE_STRING, description="조직 초대 코드"),
+                        'created_at': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description="조직 생성 시간"),
+                        'members': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Items(
+                                type=openapi.TYPE_OBJECT,
+                                properties={
+                                    'id': openapi.Schema(type=openapi.TYPE_INTEGER, description="조직원 ID"),
+                                    'organization': openapi.Schema(type=openapi.TYPE_INTEGER, description="조직 ID"),
+                                    'user': openapi.Schema(
+                                        type=openapi.TYPE_OBJECT,
+                                        properties={
+                                            'id': openapi.Schema(type=openapi.TYPE_INTEGER, description="사용자 ID"),
+                                            'username': openapi.Schema(type=openapi.TYPE_STRING, description="사용자 이름"),
+                                            'email': openapi.Schema(type=openapi.TYPE_STRING, description="사용자 이메일")
+                                        }
+                                    ),
+                                    'joined_at': openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description="조직 가입 시간")
+                                }
+                            )
+                        )
+                    }
+                )
+            ),
             404: openapi.Response(description="조직을 찾을 수 없습니다."),
             401: openapi.Response(description="인증 실패")
         }
@@ -93,8 +124,14 @@ class OrganizationDetailView(APIView):
         except Organization.DoesNotExist:
             return Response({"error": "조직을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
 
-        return Response(OrganizationSerializer(organization).data, status=status.HTTP_200_OK)
-
+        members = OrganizationMember.objects.filter(organization=organization)
+        members_data = OrganizationMemberSerializer(members, many=True).data
+        
+        organization_data = OrganizationSerializer(organization).data
+        organization_data['members'] = members_data
+        
+        return Response(organization_data, status=status.HTTP_200_OK)
+    
 class OrganizationInviteView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = [SafeJWTAuthentication]
