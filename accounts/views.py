@@ -2,14 +2,12 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.views import APIView
 from .serializers import *
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import status
 from rest_framework.response import Response
 from django.contrib.auth import authenticate
-from django.shortcuts import get_object_or_404
-from app.settings import SECRET_KEY
 from rest_framework.permissions import AllowAny
-import jwt
+from .authenticate import SafeJWTAuthentication
 
 
 class RegisterAPIView(APIView):
@@ -87,6 +85,8 @@ class RegisterAPIView(APIView):
 
 class AuthAPIView(APIView):
     permission_classes = [AllowAny]
+    authentication_classes = [SafeJWTAuthentication]
+
 
     @swagger_auto_schema(
         operation_summary="사용자 인증 확인",
@@ -109,42 +109,15 @@ class AuthAPIView(APIView):
         },
     )
     def get(self, request):
-        try:
-            access = request.COOKIES.get("access", None)
+        authentication = SafeJWTAuthentication()
+        user, auth_error = authentication.authenticate(request)
 
-            if access:
-                payload = jwt.decode(access, SECRET_KEY, algorithms=["HS256"])
-                pk = payload.get("user_id")
-                user = get_object_or_404(CustomUser, pk=pk)
-                serializer = UserSerializer(instance=user)
+        if user:
+            serializer = UserSerializer(instance=user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'Authentication failed.'}, status=status.HTTP_401_UNAUTHORIZED)
 
-                return Response(serializer.data, status=status.HTTP_200_OK)
-
-            return Response({"detail": "Access token not found in cookies."}, status=status.HTTP_400_BAD_REQUEST)
-
-        except jwt.exceptions.ExpiredSignatureError:
-            data = {"refresh": request.COOKIES.get("refresh", None)}
-            serializer = TokenRefreshSerializer(data=data)
-
-            if serializer.is_valid(raise_exception=True):
-                access = serializer.data.get("access", None)
-                refresh = serializer.data.get("refresh", None)
-                payload = jwt.decode(access, SECRET_KEY, algorithms=["HS256"])
-                pk = payload.get("user_id")
-
-                user = get_object_or_404(CustomUser, pk=pk)
-                serializer = UserSerializer(instance=user)
-
-                res = Response(serializer.data, status=status.HTTP_200_OK)
-                res.set_cookie("access", access)
-                res.set_cookie("refresh", refresh)
-
-                return res
-
-            raise jwt.exceptions.InvalidTokenError
-
-        except jwt.exceptions.InvalidTokenError:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
 
     @swagger_auto_schema(
         operation_summary="로그인",
@@ -221,8 +194,14 @@ class AuthAPIView(APIView):
         responses={202: "로그아웃 성공"},
     )
     def delete(self, request):
-        response = Response({"message": "Logout success"}, status=status.HTTP_202_ACCEPTED)
+        authentication = SafeJWTAuthentication()
+        user, auth_error = authentication.authenticate(request)
 
+        
+        if not user:
+            return Response({'error': 'Authentication failed.'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        response = Response({"message": "Logout success"}, status=status.HTTP_202_ACCEPTED)
         response.delete_cookie("access")
         response.delete_cookie("refresh")
 

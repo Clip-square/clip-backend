@@ -6,7 +6,8 @@ from django.core.exceptions import ValidationError
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = '__all__'
+        exclude = ['password']
+
 
     def create(self, validated_data):
         password = validated_data['password']

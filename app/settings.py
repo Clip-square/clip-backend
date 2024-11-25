@@ -49,7 +49,7 @@ environ.Env.read_env(BASE_DIR / '.env')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['3.36.41.144']
+ALLOWED_HOSTS = ['3.36.41.144', 'localhost', '127.0.0.1']
 
 
 # Application definition
@@ -74,7 +74,7 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.AllowAny'
     ),
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'accounts.authenticate.SafeJWTAuthentication'
     ),
 }
 
