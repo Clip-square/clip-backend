@@ -55,6 +55,7 @@ ALLOWED_HOSTS = ['3.36.41.144', 'localhost', '127.0.0.1']
 # Application definition
 
 INSTALLED_APPS = [
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -68,6 +69,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'accounts',
     'organizations',
+    'meetings'
 ]
 
 REST_FRAMEWORK = {
@@ -247,4 +249,17 @@ AUTH_USER_MODEL = "accounts.CustomUser"
 # Disable Django Login Button
 SWAGGER_SETTINGS = {
    'USE_SESSION_AUTH': False
+}
+
+# ASGI Application Definition
+ASGI_APPLICATION  =  'app.asgi.application'
+
+# Channel_layers Definition
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
 }

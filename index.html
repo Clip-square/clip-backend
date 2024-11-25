@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meeting Management</title>
+    <script>
+        let socket;
+
+        function connect(meetingId) {
+            socket = new WebSocket(`ws://localhost:8000/ws/meeting/${meetingId}/`);
+
+            socket.onmessage = function (event) {
+                const data = JSON.parse(event.data);
+                if (data.action === "user_joined") {
+                    console.log(`${data.username} has joined the meeting.`);
+                } else if (data.action === "start") {
+                    console.log("Meeting started.");
+                } else if (data.action === "pause") {
+                    console.log("Meeting paused.");
+                } else if (data.action === "end") {
+                    console.log("Meeting ended.");
+                }
+            };
+        }
+
+        function joinMeeting(username) {
+            socket.send(JSON.stringify({ action: "join_meeting", username }));
+        }
+
+        function startMeeting() {
+            socket.send(JSON.stringify({ action: "start_meeting" }));
+        }
+
+        function pauseMeeting() {
+            socket.send(JSON.stringify({ action: "pause_meeting" }));
+        }
+
+        function endMeeting() {
+            socket.send(JSON.stringify({ action: "end_meeting" }));
+        }
+    </script>
+</head>
+<body>
+    <h1>Meeting Management</h1>
+    <input type="text" id="meetingId" placeholder="Meeting ID" />
+    <button onclick="connect(document.getElementById('meetingId').value)">Connect</button>
+    <br>
+    <input type="text" id="username" placeholder="Your Username" />
+    <button onclick="joinMeeting(document.getElementById('username').value)">Join Meeting</button>
+    <br>
+    <button onclick="startMeeting()">Start Meeting</button>
+    <button onclick="pauseMeeting()">Pause Meeting</button>
+    <button onclick="endMeeting()">End Meeting</button>
+</body>
+</html>

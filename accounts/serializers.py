@@ -8,7 +8,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = '__all__'
+        exclude = ['last_login', 'groups', 'user_permissions']
 
     def create(self, validated_data):
         password = validated_data['password']
