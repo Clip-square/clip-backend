@@ -63,8 +63,8 @@ jobs:
           echo "{\"SECRET_KEY\":\"${{ secrets.SECRET_KEY }}\"}" > secrets.json
       - name: Deploy with Docker
         run: |
-          docker stop ${{ env.NAME }}
-          docker rm ${{ env.NAME }}
-          docker rmi ${{ env.DOCKER_IMAGE }}:latest
-          docker pull ${{ env.DOCKER_IMAGE }}:latest
-          docker run -d -p 8000:8000 --name clip_cicd --restart always --env-file /actions-runner/_work/clip-backend/clip-backend/.env -v $PWD/secrets.json:/clip-backend/secrets.json ${{ env.DOCKER_IMAGE }}:latest
+          sudo docker stop ${{ env.NAME }}
+          sudo docker rm ${{ env.NAME }}
+          sudo docker rmi ${{ env.DOCKER_IMAGE }}:latest
+          sudo docker pull ${{ env.DOCKER_IMAGE }}:latest
+          sudo docker run -d -p 8000:8000 --name clip_cicd --restart always --env-file /actions-runner/_work/clip-backend/clip-backend/.env -v $PWD/secrets.json:/clip-backend/secrets.json ${{ env.DOCKER_IMAGE }}:latest
