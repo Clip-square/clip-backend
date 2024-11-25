@@ -15,7 +15,7 @@ class OrganizationView(APIView):
     authentication_classes = [SafeJWTAuthentication]
 
     @swagger_auto_schema(
-        operation_description="모든 조직 정보를 조회합니다.",
+        operation_description="현재 사용자가 참가중인 모든 조직의 정보를 조회합니다.",
         responses={
             200: OrganizationSerializer,
             401: openapi.Response(description="인증 실패")
@@ -28,7 +28,7 @@ class OrganizationView(APIView):
         if not user:
             return Response({'error': '인증에 실패했습니다.'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        organizations = Organization.objects.all()
+        organizations = Organization.objects.filter(members__user=user)
         return Response(OrganizationSerializer(organizations, many=True).data, status=status.HTTP_200_OK)
     
     @swagger_auto_schema(
