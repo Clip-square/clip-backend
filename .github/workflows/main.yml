@@ -67,5 +67,5 @@ jobs:
           sudo docker rm ${{ env.NAME }}
           sudo docker rmi ${{ env.DOCKER_IMAGE }}:latest
           sudo docker pull ${{ env.DOCKER_IMAGE }}:latest
-          sudo docker run -d -p 8000:8000 --name clip_cicd --restart always --env-file /actions-runner/_work/clip-backend/clip-backend/.env -v $PWD/secrets.json:/clip-backend/secrets.json --network clip_network ${{ env.DOCKER_IMAGE }}:latest
+          sudo docker run -d -p 8000:8000 --name clip_cicd --restart always --env-file /actions-runner/_work/clip-backend/clip-backend/.env -v $PWD/secrets.json:/clip-backend/secrets.json ${{ env.DOCKER_IMAGE }}:latest
 

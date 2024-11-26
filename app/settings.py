@@ -55,7 +55,6 @@ ALLOWED_HOSTS = ['3.36.41.144', 'localhost', '127.0.0.1']
 # Application definition
 
 INSTALLED_APPS = [
-    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -67,7 +66,6 @@ INSTALLED_APPS = [
     'psycopg2',
     'drf_yasg',
     'corsheaders',
-    'channels',
     'accounts',
     'organizations',
     'meetings'
@@ -252,15 +250,3 @@ SWAGGER_SETTINGS = {
    'USE_SESSION_AUTH': False
 }
 
-# ASGI Application Definition
-ASGI_APPLICATION  =  'app.asgi.application'
-
-# Channel_layers Definition
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            "hosts": [('redis', 6379)],
-        },
-    },
-}
