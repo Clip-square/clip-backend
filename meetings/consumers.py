@@ -16,46 +16,14 @@ class MeetingConsumer(AsyncWebsocketConsumer):
         data = json.loads(text_data)
         action = data.get("action")
 
-        if action == "join_meeting":
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {"type": "user_joined", "username": data["username"]}
-            )
-        elif action == "start_meeting":
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {"type": "start_timer"}
-            )
-        elif action == "pause_meeting":
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {"type": "pause_timer"}
-            )
-        elif action == "end_meeting":
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {"type": "end_timer"}
-            )
-        elif action == "send_audio":
-            # 서버에서 오디오 데이터를 다른 클라이언트에게 전달
+        if action == "send_audio":
             audio_data = data.get("audio_data")
+            print("Received audio data:", audio_data)  # 서버에서 받은 오디오 데이터 로그
             if audio_data:
                 await self.channel_layer.group_send(
                     self.room_group_name,
                     {"type": "receive_audio", "audio_data": audio_data}
                 )
-
-    async def user_joined(self, event):
-        await self.send(json.dumps({"action": "user_joined", "username": event["username"]}))
-
-    async def start_timer(self, event):
-        await self.send(json.dumps({"action": "start"}))
-
-    async def pause_timer(self, event):
-        await self.send(json.dumps({"action": "pause"}))
-
-    async def end_timer(self, event):
-        await self.send(json.dumps({"action": "end"}))
 
     async def receive_audio(self, event):
         # 오디오 데이터를 다른 클라이언트에게 전달
