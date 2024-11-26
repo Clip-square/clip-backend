@@ -4,10 +4,6 @@ from drf_yasg.views import get_schema_view
 from rest_framework.permissions import AllowAny
 from drf_yasg import openapi
 from accounts.authenticate import SafeJWTAuthentication
-from django.shortcuts import render
-from django.http import HttpResponse
-
-
 
 
 schema_view_v1 = get_schema_view(
@@ -27,7 +23,6 @@ schema_view_v1 = get_schema_view(
         path('meetings/', include('meetings.urls')),
     ]
 )
-
 
 urlpatterns = [
     path('admin/', admin.site.urls),

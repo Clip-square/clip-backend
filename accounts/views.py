@@ -1,14 +1,13 @@
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.views import APIView
-from .serializers import *
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework import status
 from rest_framework.response import Response
 from django.contrib.auth import authenticate
 from rest_framework.permissions import AllowAny
+from .serializers import UserSerializer
 from .authenticate import SafeJWTAuthentication
-
 
 class RegisterAPIView(APIView):
     permission_classes = [AllowAny]
@@ -38,8 +37,8 @@ class RegisterAPIView(APIView):
                                 "id": openapi.Schema(type=openapi.TYPE_INTEGER, description="사용자 ID"),
                                 "email": openapi.Schema(type=openapi.TYPE_STRING, description="사용자 이메일"),
                                 "name": openapi.Schema(type=openapi.TYPE_STRING, description="사용자 이름"),
-                                "created_at": openapi.Schema(type=openapi.FORMAT_DATETIME, description="생성 시간"),
-                                "updated_at": openapi.Schema(type=openapi.FORMAT_DATETIME, description="수정 시간"),
+                                "created_at": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description="생성 시간"),
+                                "updated_at": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description="수정 시간"),
                             },
                         ),
                         "message": openapi.Schema(type=openapi.TYPE_STRING, description="결과 메시지"),
@@ -88,7 +87,6 @@ class AuthAPIView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = [SafeJWTAuthentication]
 
-
     @swagger_auto_schema(
         operation_summary="사용자 인증 확인",
         operation_description="쿠키에 저장된 액세스 토큰을 기반으로 사용자 정보를 반환합니다.",
@@ -101,8 +99,8 @@ class AuthAPIView(APIView):
                         "id": openapi.Schema(type=openapi.TYPE_INTEGER, description="사용자 ID"),
                         "email": openapi.Schema(type=openapi.TYPE_STRING, description="사용자 이메일"),
                         "name": openapi.Schema(type=openapi.TYPE_STRING, description="사용자 이름"),
-                        "created_at": openapi.Schema(type=openapi.FORMAT_DATETIME, description="생성 시간"),
-                        "updated_at": openapi.Schema(type=openapi.FORMAT_DATETIME, description="수정 시간"),
+                        "created_at": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description="생성 시간"),
+                        "updated_at": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description="수정 시간"),
                     },
                 ),
             ),
@@ -143,8 +141,8 @@ class AuthAPIView(APIView):
                                 "id": openapi.Schema(type=openapi.TYPE_INTEGER, description="사용자 ID"),
                                 "email": openapi.Schema(type=openapi.TYPE_STRING, description="사용자 이메일"),
                                 "name": openapi.Schema(type=openapi.TYPE_STRING, description="사용자 이름"),
-                                "created_at": openapi.Schema(type=openapi.FORMAT_DATETIME, description="생성 시간"),
-                                "updated_at": openapi.Schema(type=openapi.FORMAT_DATETIME, description="수정 시간"),
+                                "created_at": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description="생성 시간"),
+                                "updated_at": openapi.Schema(type=openapi.TYPE_STRING, format=openapi.FORMAT_DATETIME, description="수정 시간"),
                             },
                         ),
                         "token": openapi.Schema(
