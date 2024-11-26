@@ -15,6 +15,7 @@ class OrganizationView(APIView):
     authentication_classes = [SafeJWTAuthentication]
 
     @swagger_auto_schema(
+        operation_summary="조직 전체 조회",
         operation_description="현재 사용자가 참가중인 모든 조직의 정보를 조회합니다.",
         responses={
             200: OrganizationSerializer,
@@ -32,6 +33,7 @@ class OrganizationView(APIView):
         return Response(OrganizationSerializer(organizations, many=True).data, status=status.HTTP_200_OK)
     
     @swagger_auto_schema(
+        operation_summary="조직 생성",
         operation_description="새로운 조직을 생성합니다. 조직의 이름을 요청 본문에 포함시켜야 합니다.",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
@@ -74,6 +76,7 @@ class OrganizationDetailView(APIView):
 
     
     @swagger_auto_schema(
+        operation_summary="조직 단일 조회",
         operation_description="특정 조직의 정보를 조회합니다. 조직의 정보와 함께 조직원들도 반환합니다.",
         responses={
             200: openapi.Response(
@@ -137,6 +140,7 @@ class OrganizationInviteView(APIView):
     authentication_classes = [SafeJWTAuthentication]
 
     @swagger_auto_schema(
+        operation_summary="조직 가입",
         operation_description="초대 코드로 조직에 가입합니다. 초대 코드를 요청 본문에 포함시켜야 합니다.",
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
