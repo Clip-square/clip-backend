@@ -3,54 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meeting Management</title>
+    <title>Real-Time Audio Chat</title>
     <script>
         let socket;
+        let peerConnection;
+        const config = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+        let localStream;
 
+        // WebSocket 연결
         function connect(meetingId) {
             socket = new WebSocket(`ws://localhost:8000/ws/meeting/${meetingId}/`);
 
-            socket.onmessage = function (event) {
+            socket.onopen = () => {
+                console.log("WebSocket connection established.");
+            };
+
+            socket.onmessage = async (event) => {
                 const data = JSON.parse(event.data);
-                if (data.action === "user_joined") {
-                    console.log(`${data.username} has joined the meeting.`);
-                } else if (data.action === "start") {
-                    console.log("Meeting started.");
-                } else if (data.action === "pause") {
-                    console.log("Meeting paused.");
-                } else if (data.action === "end") {
-                    console.log("Meeting ended.");
+
+                if (data.type === "offer") {
+                    await handleOffer(data.offer);
+                } else if (data.type === "answer") {
+                    await handleAnswer(data.answer);
+                } else if (data.type === "ice-candidate") {
+                    await handleICECandidate(data.candidate);
                 }
+            };
+
+            socket.onclose = () => {
+                console.log("WebSocket connection closed.");
             };
         }
 
-        function joinMeeting(username) {
-            socket.send(JSON.stringify({ action: "join_meeting", username }));
+        // WebRTC 연결 초기화
+        async function startCall() {
+            localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            peerConnection = new RTCPeerConnection(config);
+
+            // 로컬 오디오 스트림을 PeerConnection에 추가
+            localStream.getTracks().forEach((track) => {
+                peerConnection.addTrack(track, localStream);
+            });
+
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    socket.send(JSON.stringify({ type: "ice-candidate", candidate: event.candidate }));
+                }
+            };
+
+            peerConnection.ontrack = (event) => {
+                const remoteAudio = document.createElement("audio");
+                remoteAudio.srcObject = event.streams[0];
+                remoteAudio.autoplay = true;
+                document.body.appendChild(remoteAudio);
+            };
+
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+
+            socket.send(JSON.stringify({ type: "offer", offer }));
         }
 
-        function startMeeting() {
-            socket.send(JSON.stringify({ action: "start_meeting" }));
+        async function handleOffer(offer) {
+            if (!peerConnection) {
+                await startCall();
+            }
+
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+
+            socket.send(JSON.stringify({ type: "answer", answer }));
         }
 
-        function pauseMeeting() {
-            socket.send(JSON.stringify({ action: "pause_meeting" }));
+        async function handleAnswer(answer) {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
         }
 
-        function endMeeting() {
-            socket.send(JSON.stringify({ action: "end_meeting" }));
+        async function handleICECandidate(candidate) {
+            if (candidate) {
+                await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+            }
         }
     </script>
 </head>
 <body>
-    <h1>Meeting Management</h1>
+    <h1>Real-Time Audio Chat</h1>
     <input type="text" id="meetingId" placeholder="Meeting ID" />
     <button onclick="connect(document.getElementById('meetingId').value)">Connect</button>
     <br>
-    <input type="text" id="username" placeholder="Your Username" />
-    <button onclick="joinMeeting(document.getElementById('username').value)">Join Meeting</button>
-    <br>
-    <button onclick="startMeeting()">Start Meeting</button>
-    <button onclick="pauseMeeting()">Pause Meeting</button>
-    <button onclick="endMeeting()">End Meeting</button>
+    <button onclick="startCall()">Start Call</button>
 </body>
 </html>

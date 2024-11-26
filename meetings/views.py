@@ -80,7 +80,7 @@ class MeetingView(APIView):
 
         serializer = MeetingCreateSerializer(data=request.data)
         if serializer.is_valid():
-            meeting = serializer.save()
+            meeting = serializer.save(creator=user)
             return Response({"message": "Meeting created successfully", "meeting": serializer.data}, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
