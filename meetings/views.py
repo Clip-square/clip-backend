@@ -51,7 +51,7 @@ class MeetingView(APIView):
                                                 type=openapi.TYPE_OBJECT,
                                                 properties={
                                                     'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='사용자 ID'),
-                                                    'username': openapi.Schema(type=openapi.TYPE_STRING, description='사용자 이름'),
+                                                    'name': openapi.Schema(type=openapi.TYPE_STRING, description='사용자 이름'),
                                                     'email': openapi.Schema(type=openapi.TYPE_STRING, description='사용자 이메일'),
                                                 },
                                                 description='참여자 정보'
@@ -121,7 +121,7 @@ class MeetingView(APIView):
                                                     type=openapi.TYPE_OBJECT,
                                                     properties={
                                                         'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='사용자 ID'),
-                                                        'username': openapi.Schema(type=openapi.TYPE_STRING, description='사용자 이름'),
+                                                        'name': openapi.Schema(type=openapi.TYPE_STRING, description='사용자 이름'),
                                                         'email': openapi.Schema(type=openapi.TYPE_STRING, description='사용자 이메일'),
                                                     }
                                                 )
@@ -191,7 +191,7 @@ class MeetingDetailView(APIView):
                                         type=openapi.TYPE_OBJECT,
                                         properties={
                                             'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='사용자 ID'),
-                                            'username': openapi.Schema(type=openapi.TYPE_STRING, description='사용자 이름'),
+                                            'name': openapi.Schema(type=openapi.TYPE_STRING, description='사용자 이름'),
                                             'email': openapi.Schema(type=openapi.TYPE_STRING, description='사용자 이메일'),
                                         }
                                     )
