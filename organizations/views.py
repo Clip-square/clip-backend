@@ -70,6 +70,64 @@ class OrganizationView(APIView):
 
         return Response(OrganizationSerializer(organization).data, status=status.HTTP_201_CREATED)
 
+class OrganizationMembersView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [SafeJWTAuthentication]
+
+    @swagger_auto_schema(
+        operation_summary="조직 내 모든 조직원 조회",
+        operation_description="사용자가 속한 조직의 모든 조직원을 조회합니다.",
+        responses={
+            200: openapi.Response(
+                description='Organization members retrieved successfully',
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={
+                        'members': openapi.Schema(
+                            type=openapi.TYPE_ARRAY,
+                            items=openapi.Schema(
+                                type=openapi.TYPE_OBJECT,
+                                properties={
+                                    'id': openapi.Schema(type=openapi.TYPE_INTEGER, description='사용자 ID'),
+                                    'name': openapi.Schema(type=openapi.TYPE_STRING, description='사용자 이름'),
+                                    'email': openapi.Schema(type=openapi.TYPE_STRING, description='사용자 이메일'),
+                                    'organization': openapi.Schema(type=openapi.TYPE_STRING, description='소속 조직 이름'),
+                                }
+                            )
+                        )
+                    }
+                )
+            ),
+            401: openapi.Response(description='Authentication failed'),
+            404: openapi.Response(description='No organization found')
+        }
+    )
+    def get(self, request):
+        authentication = SafeJWTAuthentication()
+        user, auth_error = authentication.authenticate(request)
+
+        if not user:
+            return Response({'error': 'Authentication failed.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        user_organizations = Organization.objects.filter(members__user=user)
+
+        if not user_organizations.exists():
+            return Response({"error": "No organization found"}, status=status.HTTP_404_NOT_FOUND)
+
+        members = OrganizationMember.objects.filter(organization__in=user_organizations).select_related('user', 'organization')
+
+        data = [
+            {
+                "id": member.user.id,
+                "name": member.user.name,
+                "email": member.user.email,
+                "organization": member.organization.name
+            }
+            for member in members
+        ]
+
+        return Response({"members": data}, status=status.HTTP_200_OK)
+
 class OrganizationDetailView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = [SafeJWTAuthentication]

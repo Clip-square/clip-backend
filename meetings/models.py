@@ -9,7 +9,7 @@ class Meeting(models.Model):
     total_duration = models.DurationField(null=True, blank=True)
     save_minutes = models.BooleanField(default=True)
     meeting_minutes = models.TextField(blank=True, null=True)
-    is_active = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True, blank=True)
 
     attendees = models.ManyToManyField(CustomUser, through='MeetingParticipant')
     organization = models.ForeignKey(Organization, related_name="meetings", on_delete=models.CASCADE)
