@@ -20,6 +20,9 @@ class SafeJWTAuthentication(BaseAuthentication):
     def authenticate(self, request):
         logger.info("Authenticating request...")
         
+        logger.debug(f"Request headers: {request.headers}")
+        logger.debug(f"Request cookies: {request.COOKIES}")
+        
         access_token = request.COOKIES.get("access", None)
         logger.debug(f"Access token from cookies: {access_token}")
 
