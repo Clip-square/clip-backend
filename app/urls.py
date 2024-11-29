@@ -4,6 +4,10 @@ from drf_yasg.views import get_schema_view
 from rest_framework.permissions import AllowAny
 from drf_yasg import openapi
 from accounts.authenticate import SafeJWTAuthentication
+from django.http import HttpResponse
+
+def health_checker(request):
+    return HttpResponse("OK")
 
 
 schema_view_v1 = get_schema_view(
@@ -25,6 +29,7 @@ schema_view_v1 = get_schema_view(
 )
 
 urlpatterns = [
+    path('', health_checker),
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
     path('organizations/', include('organizations.urls')),
