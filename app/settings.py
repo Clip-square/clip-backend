@@ -49,7 +49,7 @@ environ.Env.read_env(BASE_DIR / '.env')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['3.36.41.144', 'localhost', '127.0.0.1', "moonwlsdnl.shop"]
+ALLOWED_HOSTS = ['3.36.41.144', 'localhost', '127.0.0.1', "moonwlsdnl.shop", "172.31.7.8"]
 
 
 # Application definition
@@ -249,8 +249,6 @@ AUTH_USER_MODEL = "accounts.CustomUser"
 SWAGGER_SETTINGS = {
    'USE_SESSION_AUTH': False
 }
-
-APPEND_SLASH = True
 
 LOGGING = {
     'version': 1,
