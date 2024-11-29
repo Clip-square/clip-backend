@@ -22,7 +22,7 @@ class MeetingCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Meeting
-        fields = ['title', 'total_duration', 'organization', 'sections', 'user_ids', 'save_minutes', 'participants', 'is_active']
+        fields = ['id', 'title', 'total_duration', 'organization', 'sections', 'user_ids', 'save_minutes', 'participants', 'is_active']
 
     def create(self, validated_data):
         sections_data = validated_data.pop('sections', [])
