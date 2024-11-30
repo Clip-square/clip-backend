@@ -31,7 +31,6 @@ class Meeting(models.Model):
 class Section(models.Model):
     meeting = models.ForeignKey(Meeting, related_name='sections', on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
-    start_time = models.DateTimeField(null=True, blank=True)
     end_time = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):

@@ -6,7 +6,7 @@ from accounts.serializers import UserSerializer
 class SectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Section
-        fields = ['name']
+        fields = ['name', 'end_time']
     
 class MeetingParticipantSerializer(serializers.ModelSerializer):
     user = UserSerializer()
@@ -22,7 +22,7 @@ class MeetingCreateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Meeting
-        fields = ['id', 'title', 'total_duration', 'organization', 'sections', 'user_ids', 'save_minutes', 'participants', 'is_active', 'creator']
+        fields = ['id', 'title', 'total_duration', 'organization', 'sections', 'user_ids', 'save_minutes', 'participants', 'is_active', 'creator', 'start_time']
 
     def create(self, validated_data):
         sections_data = validated_data.pop('sections', [])
