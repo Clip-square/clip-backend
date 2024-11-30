@@ -2,6 +2,13 @@ from django.db import models
 from accounts.models import CustomUser
 from organizations.models import Organization
 
+STATUS_CHOICES = [
+    ("true", "True"),
+    ("ongoing", "Ongoing"),
+    ("false", "False"),
+]
+
+
 class Meeting(models.Model):
     title = models.CharField(max_length=255)
     start_time = models.DateTimeField(null=True, blank=True)
@@ -9,7 +16,7 @@ class Meeting(models.Model):
     total_duration = models.DurationField(null=True, blank=True)
     save_minutes = models.BooleanField(default=True)
     meeting_minutes = models.TextField(blank=True, null=True)
-    is_active = models.BooleanField(default=True, blank=True)
+    is_active = models.CharField(max_length=10, choices=STATUS_CHOICES, default="true", blank=True)
 
     attendees = models.ManyToManyField(CustomUser, through='MeetingParticipant')
     organization = models.ForeignKey(Organization, related_name="meetings", on_delete=models.CASCADE)

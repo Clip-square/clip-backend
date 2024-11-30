@@ -129,6 +129,11 @@ class MeetingView(APIView):
                                         )
                                     ),
                                     'created_at': openapi.Schema(type=openapi.TYPE_STRING, format='date-time', description='생성일'),
+                                    'is_active': openapi.Schema(
+                                        type=openapi.TYPE_STRING, 
+                                        description='활성 상태 ("true", "ongoing", "false")',
+                                        enum=["true", "ongoing", "false"], 
+                                    ),    
                                 }
                             )
                         )
@@ -199,6 +204,11 @@ class MeetingDetailView(APIView):
                             )
                         ),
                         'created_at': openapi.Schema(type=openapi.TYPE_STRING, format='date-time', description='생성일'),
+                        'is_active': openapi.Schema(
+                            type=openapi.TYPE_STRING, 
+                            description='활성 상태 ("true", "ongoing", "false")',
+                            enum=["true", "ongoing", "false"], 
+                        ),
                     }
                 )
             ),
