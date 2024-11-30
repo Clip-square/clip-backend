@@ -209,6 +209,7 @@ class OrganizationDetailView(APIView):
         
         return Response(organization_data, status=status.HTTP_200_OK)
     
+    
 class OrganizationInviteView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = [SafeJWTAuthentication]

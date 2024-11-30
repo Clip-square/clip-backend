@@ -230,3 +230,61 @@ class MeetingDetailView(APIView):
 
         serializer = MeetingCreateSerializer(meeting)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+class MeetingStatusUpdateView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [SafeJWTAuthentication]
+
+    @swagger_auto_schema(
+        operation_summary="회의 상태를 'ongoing'으로 업데이트",
+        operation_description="회의 상태를 'ongoing'으로 변경합니다.",
+        responses={
+            200: openapi.Response(description='회의 상태가 성공적으로 업데이트되었습니다.'),
+            400: openapi.Response(description='요청이 올바르지 않습니다.'),
+            401: openapi.Response(description='인증 실패'),
+            404: openapi.Response(description='회의를 찾을 수 없습니다.')
+        }
+    )
+    def post(self, request, meeting_id):
+        authentication = SafeJWTAuthentication()
+        user, auth_error = authentication.authenticate(request)
+
+        if not user:
+            return Response({'error': '인증에 실패했습니다.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        try:
+            meeting = Meeting.objects.get(id=meeting_id)
+        except Meeting.DoesNotExist:
+            return Response({"error": "회의를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+
+        meeting.is_active = "ongoing"
+        meeting.save()
+
+        return Response({"message": "회의 상태가 'ongoing'으로 성공적으로 업데이트되었습니다."}, status=status.HTTP_200_OK)
+
+    @swagger_auto_schema(
+        operation_summary="회의 상태를 'false'로 업데이트",
+        operation_description="회의 상태를 'false'로 변경합니다.",
+        responses={
+            200: openapi.Response(description='회의 상태가 성공적으로 업데이트되었습니다.'),
+            400: openapi.Response(description='요청이 올바르지 않습니다.'),
+            401: openapi.Response(description='인증 실패'),
+            404: openapi.Response(description='회의를 찾을 수 없습니다.')
+        }
+    )
+    def delete(self, request, meeting_id):
+        authentication = SafeJWTAuthentication()
+        user, auth_error = authentication.authenticate(request)
+
+        if not user:
+            return Response({'error': '인증에 실패했습니다.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        try:
+            meeting = Meeting.objects.get(id=meeting_id)
+        except Meeting.DoesNotExist:
+            return Response({"error": "회의를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+
+        meeting.is_active = "false"
+        meeting.save()
+
+        return Response({"message": "회의 상태가 'false'로 성공적으로 업데이트되었습니다."}, status=status.HTTP_200_OK)
