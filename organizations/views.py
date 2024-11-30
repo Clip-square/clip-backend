@@ -75,8 +75,17 @@ class OrganizationMembersView(APIView):
     authentication_classes = [SafeJWTAuthentication]
 
     @swagger_auto_schema(
-        operation_summary="조직 내 모든 조직원 조회",
-        operation_description="사용자가 속한 조직의 모든 조직원을 조회합니다.",
+        operation_summary="조직 내 조직원 조회",
+        operation_description="사용자가 속한 특정 조직의 모든 조직원을 조회합니다. 조직 ID를 전달해야 합니다.",
+        manual_parameters=[
+            openapi.Parameter(
+                'organization_id',
+                openapi.IN_QUERY,
+                description="조직 ID",
+                type=openapi.TYPE_INTEGER,
+                required=True
+            )
+        ],
         responses={
             200: openapi.Response(
                 description='Organization members retrieved successfully',
@@ -98,23 +107,29 @@ class OrganizationMembersView(APIView):
                     }
                 )
             ),
+            400: openapi.Response(description='Invalid or missing organization ID'),
             401: openapi.Response(description='Authentication failed'),
-            404: openapi.Response(description='No organization found')
+            404: openapi.Response(description='Organization not found')
         }
     )
-    def get(self, request):
+    def get(self, request, organization_id):
         authentication = SafeJWTAuthentication()
         user, auth_error = authentication.authenticate(request)
 
         if not user:
             return Response({'error': 'Authentication failed.'}, status=status.HTTP_401_UNAUTHORIZED)
 
-        user_organizations = Organization.objects.filter(members__user=user)
+        if not organization_id:
+            return Response({"error": "조직 ID가 필요합니다."}, status=status.HTTP_400_BAD_REQUEST)
 
-        if not user_organizations.exists():
-            return Response({"error": "No organization found"}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            # 사용자가 속한 조직인지 확인
+            organization = Organization.objects.get(id=organization_id, members__user=user)
+        except Organization.DoesNotExist:
+            return Response({"error": "해당 조직을 찾을 수 없거나 권한이 없습니다."}, status=status.HTTP_404_NOT_FOUND)
 
-        members = OrganizationMember.objects.filter(organization__in=user_organizations).select_related('user', 'organization')
+        # 해당 조직의 조직원 조회
+        members = OrganizationMember.objects.filter(organization=organization).select_related('user', 'organization')
 
         data = [
             {
@@ -127,6 +142,7 @@ class OrganizationMembersView(APIView):
         ]
 
         return Response({"members": data}, status=status.HTTP_200_OK)
+
 
 class OrganizationDetailView(APIView):
     permission_classes = [AllowAny]

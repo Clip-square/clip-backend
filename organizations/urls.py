@@ -5,5 +5,5 @@ urlpatterns = [
     path("", OrganizationView.as_view()),
     path("<int:organization_id>/", OrganizationDetailView.as_view()),
     path("invite/", OrganizationInviteView.as_view()),
-    path("members/", OrganizationMembersView.as_view())
+    path("members/<int:organization_id>/", OrganizationMembersView.as_view()),
 ]
