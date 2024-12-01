@@ -1,3 +1,7 @@
+from django.http import JsonResponse
+import base64
+from pydub import AudioSegment
+from io import BytesIO
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
@@ -9,7 +13,17 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from organizations.models import Organization
 from datetime import datetime
-
+from background_task import background
+from datetime import timedelta
+import os
+from tqdm import tqdm
+import numpy as np
+import soundfile as sf
+import librosa
+import glob
+import speech_recognition as sr
+import nemo.collections.asr as nemo_asr
+from simple_diarizer.diarizer import Diarizer
 
 
 class MeetingView(APIView):
@@ -273,12 +287,28 @@ class MeetingStatusUpdateView(APIView):
         request_body=openapi.Schema(
             type=openapi.TYPE_OBJECT,
             properties={
-                'record_list': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING), description="녹음 파일 리스트"),
-                'total_duration': openapi.Schema(type=openapi.TYPE_STRING, format="duration", description="총 회의 시간 (예: '01:30:00')"),
-                'section_end_times': openapi.Schema(type=openapi.TYPE_ARRAY, items=openapi.Items(type=openapi.TYPE_STRING, format="date-time"), description="각 섹션 종료 시간"),
-                'start_time': openapi.Schema(type=openapi.TYPE_STRING, format="date", description="회의 시작 날짜"),
+                'record_file': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format="binary",
+                    description="업로드할 녹음 파일 (wav 형식)"
+                ),
+                'total_duration': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format="duration",
+                    description="총 회의 시간 (예: '01:30:00')"
+                ),
+                'section_end_times': openapi.Schema(
+                    type=openapi.TYPE_ARRAY,
+                    items=openapi.Items(type=openapi.TYPE_STRING, format="date-time"),
+                    description="각 섹션 종료 시간"
+                ),
+                'start_time': openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    format="date",
+                    description="회의 시작 날짜"
+                ),
             },
-            required=['총 회의 시간', '각 섹션이 끝난 시간', '회의 시작 시간'],
+            required=['record_file', 'total_duration', 'section_end_times', 'start_time'],
         ),
         responses={
             200: openapi.Response(description="회의 상태가 성공적으로 업데이트되었습니다."),
@@ -301,23 +331,46 @@ class MeetingStatusUpdateView(APIView):
 
         # 요청 데이터 검증
         data = request.data
+        record_file = request.FILES.get('record_file') 
         total_duration = data.get('total_duration')
-        section_end_times = data.get('section_end_times')
-        start_time = data.get('start_time')  # 회의 시작 시간
-        end_time = datetime.now()  # 현재 시간
+        section_end_times = data.getlist('section_end_times[]')
+        start_time = data.get('start_time')
+        end_time = datetime.now() 
+        
+        meeting = Meeting.objects.get(id=meeting_id)
+        num_speakers = meeting.attendees.count()  
 
-        if not total_duration or not section_end_times or not start_time:
+        
+        if not record_file or not total_duration or not section_end_times or not start_time:
             return Response({"error": "요청 데이터가 누락되었습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # 회의 데이터 업데이트
+        if not record_file.name.endswith('.wav'):
+            return Response({"error": "녹음 파일은 .wav 형식이어야 합니다."}, status=status.HTTP_400_BAD_REQUEST)
+        
+        record_file_data = record_file.read()
+        record_file_base64 = base64.b64encode(record_file_data).decode('utf-8')
+
         meeting.is_active = "false"
         meeting.end_time = end_time
         meeting.total_duration = total_duration
-        meeting.start_time = start_time  # 회의 시작 시간 업데이트
+        meeting.start_time = start_time
         meeting.save()
+        
+        section_titles = list(meeting.sections.values_list('name', flat=True))
 
-        # 섹션 데이터 업데이트
+        process_meeting_data(
+            meeting_id=meeting.id,
+            meeting_title=meeting.title,
+            section_titles=section_titles,
+            record_file_data=record_file_base64,
+            start_time=start_time,
+            section_end_times=section_end_times,
+            num_speakers=num_speakers,
+            schedule=0
+        )
+
         sections = meeting.sections.all()
+        
         if len(sections) != len(section_end_times):
             return Response({"error": "섹션 개수와 종료 시간 개수가 일치하지 않습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -327,3 +380,163 @@ class MeetingStatusUpdateView(APIView):
 
         return Response({"message": "회의 상태가 'false'로 성공적으로 업데이트되었습니다."}, status=status.HTTP_200_OK)
 
+
+@background(schedule=0)
+def process_meeting_data(meeting_id, meeting_title, section_titles, section_end_times, start_time, record_file_data, num_speakers):
+    try:
+        record_file_data_bytes = base64.b64decode(record_file_data)
+        file_content = BytesIO(record_file_data_bytes)
+
+        meeting = Meeting.objects.get(id=meeting_id)
+
+        base_dir = os.getcwd() 
+        save_dir = os.path.join(base_dir, f"meetings", f"meeting_{meeting.id}")
+        voice_seg_dir = os.path.join(base_dir, f"meetings", f"meeting_{meeting.id}", f"segmented")
+        
+        if not os.path.exists(save_dir):
+            os.makedirs(save_dir)
+
+        start_time = convert_to_timedelta(start_time)
+
+        section_end_times = [convert_to_timedelta(time) for time in section_end_times]
+
+        audio, sr_ = librosa.load(file_content, sr=16000, mono=False)
+        
+        if audio.ndim == 1:
+            audio = audio[:, None]
+            audio = audio.repeat(2, axis=1)
+        
+        print(f"Audio loaded: {audio.shape} samples at {sr_} Hz")
+
+        section_start = start_time
+        section_file_paths = [] 
+        for idx, section_end in enumerate(section_end_times):
+            start_sample = int(section_start.total_seconds() * sr_) 
+            end_sample = int(section_end.total_seconds() * sr_) 
+
+            section_audio = audio[start_sample:end_sample, :] 
+            section_filename = f"section_{idx + 1}.wav"
+            section_audio_path = os.path.join(save_dir, section_filename)
+
+            print(f"Saving section {idx + 1} to {section_audio_path}")
+            sf.write(section_audio_path, section_audio, sr_)
+            section_file_paths.append(section_audio_path)
+
+            section_start = section_end
+
+            print(f"Section {idx + 1} ({meeting_title}) 저장 완료: {section_filename}")
+
+        model_name = "eesungkim/stt_kr_conformer_transducer_large" 
+        asr_model = nemo_asr.models.ASRModel.from_pretrained(model_name)
+        
+        file_names = [i for i in os.listdir(save_dir) if 'wav' in i]
+        
+        all_stt_results = []
+        
+        for file_name in tqdm(file_names):
+            print(f"Processing {file_name}...")
+            
+            diar = Diarizer(embed_model='xvec', cluster_method='sc')
+
+            # 파일 경로 설정
+            file_path = os.path.join(save_dir, file_name)
+
+            # 소리 파일 읽기
+            sound_raw, sr_ = sf.read(file_path)
+            
+            seg_initial = diar.diarize(file_path)
+            
+            detected_speakers = len(set([seg_['label'] for seg_ in seg_initial]))
+            num_speakers = min(num_speakers, detected_speakers)
+
+            seg = diar.diarize(file_path, num_speakers=num_speakers)
+            
+            # 음성 파일 분할 폴더 준비
+            if os.path.exists(voice_seg_dir):
+                files = glob.glob(f'{voice_seg_dir}/*')
+                for f in files:
+                    os.remove(f)
+            else:
+                os.makedirs(voice_seg_dir)
+
+            # 화자 분리된 오디오 저장
+            for diar_num, seg_ in enumerate(seg):
+                start_index = seg_['start_sample']
+                end_index = seg_['end_sample'] + 1
+                speaker = seg_['label']
+                diar_num_str = str(diar_num).zfill(3)
+                slice_voice_path = f"{voice_seg_dir}/diar{diar_num_str}_speaker{speaker}.wav"
+                sf.write(slice_voice_path, sound_raw[start_index:end_index], sr_)
+
+            # 분할된 파일 순회하며 STT 처리
+            seg_file_list = np.sort(os.listdir(voice_seg_dir))
+            stt_dict = {i: [] for i in range(num_speakers)} 
+
+            for file_name_ in seg_file_list:
+                try:
+                    file_path_ = os.path.join(voice_seg_dir, file_name_)
+                    r = sr.Recognizer()
+
+                    with sr.AudioFile(file_path_) as source:
+                        audio = r.record(source)
+
+                    # 구글 음성 인식 서비스로 STT 실행
+                    stt = r.recognize_google(audio, language='ko-KR', show_all=True)
+                    diar_info = file_name_.replace('.wav', '')
+
+                    # STT 결과를 화자별로 저장
+                    if 'alternative' in stt and len(stt['alternative']) > 0:
+                        transcripts = [alt['transcript'] for alt in stt['alternative']]
+                        stt_text = ' '.join(transcripts)  # 결과 텍스트 합치기
+                        speaker = file_name_.split('_')[-1][7]  # speaker 번호 추출
+                        stt_dict[int(speaker)].append(stt_text)  # 화자별로 텍스트 저장
+
+                except sr.UnknownValueError:
+                    print(f"Google Speech Recognition could not understand audio in {file_name_}.")
+                except sr.RequestError as e:
+                    print(f"Could not request results from Google Speech Recognition service for {file_name_}; {e}")
+                except Exception as e:
+                    print(f"Error processing {file_name_}: {e}")
+
+            # 현재 파일에 대한 STT 결과를 합친 텍스트로 저장
+            file_stt_results = []
+            for speaker, transcripts in stt_dict.items():
+                result = f"speaker{speaker}: {' '.join(transcripts)},"  # 화자별 텍스트 합치기
+                file_stt_results.append(result)
+            
+            # 현재 파일에 대한 결과를 전체 결과 리스트에 추가
+            all_stt_results.append(' '.join(file_stt_results))  # 화자별 결과 합친 텍스트
+
+            print(f"Finished processing {file_name}.")
+
+        # 최종 STT 결과 배열 확인
+        print(all_stt_results)
+
+
+    except Meeting.DoesNotExist:
+        print(f"회의 ID {meeting_id}를 찾을 수 없습니다.")
+    except Exception as e:
+        print(f"비동기 작업 처리 중 오류 발생: {e}")
+
+def convert_to_timedelta(time_str):
+    """
+    시간 형식을 'YYYY-MM-DD HH:MM:SS' 또는 'HH:MM:SS'에서 timedelta로 변환하는 함수.
+    """
+    try:
+        time_str = time_str.strip()
+        
+        # 날짜만 있는 경우 (예: '2024-12-01')
+        if '-' in time_str and len(time_str.split('-')[2]) == 2:  # 'YYYY-MM-DD' 형식
+            # 날짜만 있으므로, 시간을 00:00:00으로 설정
+            time_obj = datetime.strptime(time_str + ' 00:00:00', '%Y-%m-%d %H:%M:%S')
+            return timedelta(hours=time_obj.hour, minutes=time_obj.minute, seconds=time_obj.second)
+        
+        # 날짜가 포함된 경우(예: '2024-12-01 00:00:00') 처리
+        elif ' ' in time_str:
+            # '2024-12-01 00:00:00' 형식
+            time_obj = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
+            return timedelta(hours=time_obj.hour, minutes=time_obj.minute, seconds=time_obj.second)
+        
+    except Exception as e:
+        print(f"시간 변환 오류: {e}", time_str)
+        return timedelta(0)  # 오류가 발생하면 기본값으로 0초 반환

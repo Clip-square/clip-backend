@@ -29,7 +29,7 @@ schema_view_v1 = get_schema_view(
 )
 
 urlpatterns = [
-    path('', health_checker),
+    path('', health_checker,),
     path('admin/', admin.site.urls),
     path('accounts/', include('accounts.urls')),
     path('organizations/', include('organizations.urls')),

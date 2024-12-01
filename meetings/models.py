@@ -21,7 +21,7 @@ class Meeting(models.Model):
     attendees = models.ManyToManyField(CustomUser, through='MeetingParticipant')
     organization = models.ForeignKey(Organization, related_name="meetings", on_delete=models.CASCADE)
     
-    creator = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='created_meetings')
+    creator = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='created_meetings', blank=True)
 
 
     def __str__(self):
