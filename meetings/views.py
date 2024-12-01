@@ -1,4 +1,6 @@
 from django.http import JsonResponse
+import asyncio
+from asgiref.sync import sync_to_async
 from sentence_transformers import SentenceTransformer, util
 import base64
 from pydub import AudioSegment
@@ -26,7 +28,7 @@ import speech_recognition as sr
 import nemo.collections.asr as nemo_asr
 from simple_diarizer.diarizer import Diarizer
 import openai
-
+import json
 
 
 class MeetingView(APIView):
@@ -256,9 +258,8 @@ class MeetingDetailView(APIView):
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 model = SentenceTransformer('all-MiniLM-L6-v2')
-# minutes_vector_db = np.load(".././minutes_vector_db.npz", allow_pickle=True)
-# summary_vector_db = np.load(".././summary_vector_db.npz", allow_pickle=True)
-
+minutes_vector_db = np.load("minutes_vector_db.npz", allow_pickle=True)
+summary_vector_db = np.load("summary_vector_db.npz", allow_pickle=True)
 
 class MeetingStatusUpdateView(APIView):
     permission_classes = [AllowAny]
@@ -517,16 +518,19 @@ def process_meeting_data(meeting_id, meeting_title, section_titles, section_end_
             # 현재 파일에 대한 결과를 전체 결과 리스트에 추가
             all_stt_results.append(' '.join(file_stt_results))  # 화자별 결과 합친 텍스트
 
-            print(f"Finished processing {file_name}.")
-
         # 최종 STT 결과 배열 확인
         print(all_stt_results)
-
+        
+        asyncio.run(save_minutes(meeting=meeting, topic=meeting_title, sub_topic_list=section_titles, speech_list=all_stt_results, date=start_time))
 
     except Meeting.DoesNotExist:
         print(f"회의 ID {meeting_id}를 찾을 수 없습니다.")
     except Exception as e:
         print(f"비동기 작업 처리 중 오류 발생: {e}")
+        
+async def save_minutes(meeting, topic, sub_topic_list, speech_list, date):
+    minutes = await create_minutes(topic, sub_topic_list, speech_list, date)
+    await save_meeting_minutes(meeting, minutes)
 
 def convert_to_timedelta(time_str):
     """
@@ -550,3 +554,81 @@ def convert_to_timedelta(time_str):
     except Exception as e:
         print(f"시간 변환 오류: {e}", time_str)
         return timedelta(0)  # 오류가 발생하면 기본값으로 0초 반환
+    
+def retrieve_summary_style(text, vector_db):
+    embeddings = vector_db['data']
+    metadata = vector_db['indices']
+
+    # 입력 텍스트의 벡터 추출
+    text_embedding = model.encode(text)  # (1, 384)
+    
+    # embeddings가 2D 배열인지 확인 후 (N, 384) 형태로 처리
+    if embeddings.ndim == 1:
+        embeddings = embeddings.reshape(-1, 384)  # (N, 384)로 변환
+    
+    # 데이터 타입을 맞추기 (float32로 변환)
+    text_embedding = text_embedding.astype(np.float32)
+    embeddings = embeddings.astype(np.float32)
+    
+    # 유사도 계산
+    similarity = util.cos_sim(text_embedding, embeddings)  # (1, N) 형태의 결과
+    
+    # 가장 높은 유사도를 가진 인덱스 찾기
+    best_match_idx = similarity.argmax()
+    
+    # 관련된 요약 스타일 반환
+    return metadata[best_match_idx]
+
+
+# 벡터 DB에서 회의 주제 검색
+def retrieve_minutes_topic(text, vector_db):
+    embeddings = vector_db['data']
+    metadata = vector_db['indices']
+
+    # 입력 텍스트의 벡터 추출
+    text_embedding = model.encode(text)  # (1, 384)
+    
+    # embeddings가 2D 배열인지 확인 후 (N, 384) 형태로 처리
+    if embeddings.ndim == 1:
+        embeddings = embeddings.reshape(-1, 384)  # (N, 384)로 변환
+    
+    similarity = util.cos_sim(text_embedding, embeddings)
+    best_match_idx = similarity.argmax()
+    return metadata[best_match_idx]
+
+# GPT-4 API 호출
+async def generate_summary(prompt):
+    response = await openai.ChatCompletion.acreate(
+        model="gpt-4",
+        messages=[
+            {"role": "system", "content": "당신은 전문 회의록 작성자입니다."},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    return response['choices'][0]['message']['content']
+
+# 회의록 생성
+async def create_minutes(topic, sub_topic_list, speech_list, date):
+    summaries = []
+    for sub_topic, speech in zip(sub_topic_list, speech_list):
+        summary_style = retrieve_summary_style(speech, summary_vector_db)
+        prompt = f"""
+        다음 스타일로 회의 내용을 요약하세요:
+        {summary_style}
+
+        소주제: {sub_topic}
+        내용: {speech}
+        """
+        summary = await generate_summary(prompt)
+        summaries.append(f"## {sub_topic}\n{summary}")
+
+    minutes_topic_info = retrieve_minutes_topic(topic, minutes_vector_db)
+    minutes_topic_info_text = "\n".join(minutes_topic_info) if isinstance(minutes_topic_info, list) else minutes_topic_info
+
+    minutes = f"# {topic}\n\n**회의 일시**: {date}\n\n" + "\n\n".join(summaries) + f"\n\n---\n\n### 종합 정리\n{minutes_topic_info_text}"
+    return minutes
+
+@sync_to_async
+def save_meeting_minutes(meeting, minutes):
+    meeting.meeting_minutes = minutes
+    meeting.save()
