@@ -5,7 +5,7 @@ on:
     branches: main
   pull_request:
     branches: main
-    
+
 env:
   DOCKER_IMAGE: ghcr.io/clip-square/clip-backend
   VERSION: ${{ github.sha }}
@@ -45,7 +45,7 @@ jobs:
   deploy:
     needs: build
     name: Deploy
-    runs-on: [ self-hosted, label-go ]
+    runs-on: [self-hosted, label-go]
     steps:
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -60,6 +60,7 @@ jobs:
           echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
           echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
           echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
+          echo "OPENAI_API_KEY${{ secrets.OPENAI_API_KEY }}" >> .env
           echo "{\"SECRET_KEY\":\"${{ secrets.SECRET_KEY }}\"}" > secrets.json
       - name: Deploy with Docker
         run: |
@@ -68,4 +69,3 @@ jobs:
           sudo docker rmi ${{ env.DOCKER_IMAGE }}:latest
           sudo docker pull ${{ env.DOCKER_IMAGE }}:latest
           sudo docker run -d -p 8000:8000 --name clip_cicd --restart always --env-file /actions-runner/_work/clip-backend/clip-backend/.env -v $PWD/secrets.json:/clip-backend/secrets.json ${{ env.DOCKER_IMAGE }}:latest
-

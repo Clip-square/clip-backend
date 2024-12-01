@@ -24,6 +24,8 @@ import glob
 import speech_recognition as sr
 import nemo.collections.asr as nemo_asr
 from simple_diarizer.diarizer import Diarizer
+import openai
+
 
 
 class MeetingView(APIView):
@@ -249,6 +251,9 @@ class MeetingDetailView(APIView):
 
         serializer = MeetingCreateSerializer(meeting)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
 
 class MeetingStatusUpdateView(APIView):
     permission_classes = [AllowAny]

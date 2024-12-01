@@ -42,6 +42,8 @@ SECRET_KEY = get_secret("SECRET_KEY")
 env = environ.Env()
 environ.Env.read_env(BASE_DIR / '.env')
 
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
