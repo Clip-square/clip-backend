@@ -4946,6 +4946,33 @@ files = [
 ]
 
 [[package]]
+name = "sentence-transformers"
+version = "3.3.1"
+description = "State-of-the-Art Text Embeddings"
+optional = false
+python-versions = ">=3.9"
+files = [
+    {file = "sentence_transformers-3.3.1-py3-none-any.whl", hash = "sha256:abffcc79dab37b7d18d21a26d5914223dd42239cfe18cb5e111c66c54b658ae7"},
+    {file = "sentence_transformers-3.3.1.tar.gz", hash = "sha256:9635dbfb11c6b01d036b9cfcee29f7716ab64cf2407ad9f403a2e607da2ac48b"},
+]
+
+[package.dependencies]
+huggingface-hub = ">=0.20.0"
+Pillow = "*"
+scikit-learn = "*"
+scipy = "*"
+torch = ">=1.11.0"
+tqdm = "*"
+transformers = ">=4.41.0,<5.0.0"
+
+[package.extras]
+dev = ["accelerate (>=0.20.3)", "datasets", "peft", "pre-commit", "pytest", "pytest-cov"]
+onnx = ["optimum[onnxruntime] (>=1.23.1)"]
+onnx-gpu = ["optimum[onnxruntime-gpu] (>=1.23.1)"]
+openvino = ["optimum-intel[openvino] (>=1.20.0)"]
+train = ["accelerate (>=0.20.3)", "datasets"]
+
+[[package]]
 name = "sentencepiece"
 version = "0.2.0"
 description = "SentencePiece python wrapper"
@@ -6427,4 +6454,4 @@ testing = ["coverage[toml]", "zope.event", "zope.testing"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "d369a7f7280d894786ffd46bfb622fa11c09d399a72b3d4b161f6c6656a9cfa3"
+content-hash = "62aa5c443f393fbb9c4def4128db7d08015d9bc33b3741ce706c9300230e83f5"

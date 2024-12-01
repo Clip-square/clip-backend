@@ -1,4 +1,5 @@
 from django.http import JsonResponse
+from sentence_transformers import SentenceTransformer, util
 import base64
 from pydub import AudioSegment
 from io import BytesIO
@@ -253,6 +254,7 @@ class MeetingDetailView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
+model = SentenceTransformer('all-MiniLM-L6-v2')
 
 
 class MeetingStatusUpdateView(APIView):
