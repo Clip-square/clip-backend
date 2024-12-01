@@ -258,8 +258,8 @@ class MeetingDetailView(APIView):
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
 model = SentenceTransformer('all-MiniLM-L6-v2')
-minutes_vector_db = np.load("minutes_vector_db.npz", allow_pickle=True)
-summary_vector_db = np.load("summary_vector_db.npz", allow_pickle=True)
+minutes_vector_db = np.load("meetings/minutes_vector_db.npz", allow_pickle=True)
+summary_vector_db = np.load("meetings/summary_vector_db.npz", allow_pickle=True)
 
 class MeetingStatusUpdateView(APIView):
     permission_classes = [AllowAny]
