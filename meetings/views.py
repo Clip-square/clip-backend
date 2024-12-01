@@ -257,9 +257,19 @@ class MeetingDetailView(APIView):
 
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
+
 model = SentenceTransformer('all-MiniLM-L6-v2')
-minutes_vector_db = np.load("meetings/minutes_vector_db.npz", allow_pickle=True)
-summary_vector_db = np.load("meetings/summary_vector_db.npz", allow_pickle=True)
+
+
+if os.path.exists("meetings/minutes_vector_db.npz"):
+    minutes_vector_db = np.load("meetings/minutes_vector_db.npz", encoding='latin1', allow_pickle=True)
+
+    summary_vector_db = np.load("meetings/summary_vector_db.npz", encoding='latin1', allow_pickle=True)
+
+    print("File loaded successfully")
+else:
+    print("File not found at path:", "meetings/minutes_vector_db.npz")
+
 
 class MeetingStatusUpdateView(APIView):
     permission_classes = [AllowAny]
